@@ -3,12 +3,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Toast from '@/components/Toast'
+import AdminSubmitQuestionModal from '@/components/AdminSubmitQuestionModal'
 import type { Question } from '@/lib/supabase'
+import type { AdminQuestionSubmission } from '@/components/AdminSubmitQuestionModal'
 
 export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({
     message: '',
     type: 'success',
@@ -77,12 +81,69 @@ export default function AdminPage() {
     }
   }
 
+  const handleAdminSubmitQuestion = async (data: AdminQuestionSubmission) => {
+    setIsSubmitting(true)
+    try {
+      const formData = new FormData()
+      formData.append('title', data.question)
+      formData.append('description', data.description)
+      formData.append('endDate', data.endDate)
+      formData.append('endTime', data.endTime)
+      formData.append('category', data.category)
+      formData.append('isAdmin', 'true') // Flag to indicate admin submission
+      if (data.photo) {
+        formData.append('photo', data.photo)
+      }
+
+      const response = await fetch('/api/questions', {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create question')
+      }
+
+      setToast({
+        message: 'Question created and approved successfully!',
+        type: 'success',
+        isVisible: true
+      })
+      fetchQuestions()
+      setIsModalOpen(false)
+    } catch (error: any) {
+      console.error('Error submitting question:', error)
+      setToast({
+        message: error.message || 'Failed to create question. Please try again.',
+        type: 'error',
+        isVisible: true
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="h-screen flex flex-col" style={{ backgroundColor: '#FCF9E1' }}>
       {/* Fixed Header Section */}
       <div className="sticky top-0 z-20 px-4 md:px-8 pt-4 md:pt-8" style={{ backgroundColor: '#FCF9E1' }}>
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Admin Questions</h1>
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Admin Questions</h1>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg hover:shadow-xl transition-shadow active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #5799E9 0%, #95C5FF 100%)' }}
+              title="Create Question"
+            >
+              <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
 
           {/* Filter Tabs */}
           <div className="flex gap-2 mb-4 md:mb-6 overflow-x-auto pb-2">
@@ -216,6 +277,14 @@ export default function AdminPage() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={() => setToast({ ...toast, isVisible: false })}
+      />
+
+      {/* Admin Submit Question Modal */}
+      <AdminSubmitQuestionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleAdminSubmitQuestion}
+        isLoading={isSubmitting}
       />
     </div>
   )

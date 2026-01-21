@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const endDate = formData.get('endDate') as string
     const endTime = formData.get('endTime') as string
     const category = formData.get('category') as string
+    const isAdmin = formData.get('isAdmin') === 'true'
     const photo = formData.get('photo') as File | null
 
     let photoUrl = null
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
           end_time: endTime,
           category,
           photo_url: photoUrl,
-          status: 'pending', // Default status
+          status: isAdmin ? 'approved' : 'pending', // Admin submissions are auto-approved
           symbol: category.toUpperCase(),
           yes_percentage: 50,
           no_percentage: 50,
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Question submitted successfully and waiting for approval',
+      message: isAdmin ? 'Question created and approved successfully' : 'Question submitted successfully and waiting for approval',
       data: data[0]
     })
   } catch (error: any) {
