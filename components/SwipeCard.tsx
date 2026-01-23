@@ -336,8 +336,8 @@ export default function SwipeCard({
               </button>
             </div>
 
-            {/* Volume and Category - Bottom */}
-            <div className="text-sm text-gray-800 font-bold text-center space-y-1">
+            {/* Volume and Category - Bottom Left */}
+            <div className="flex gap-2 text-sm text-gray-800 font-bold">
               <div>{volume} Vol</div>
               <div>{category}</div>
             </div>

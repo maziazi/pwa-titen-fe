@@ -40,12 +40,12 @@ export default function CardStack({
     }
     
     // Move to next card
-    if (activeCardIndex < cardStack.length - 1) {
-      setActiveCardIndex(activeCardIndex + 1)
-    } else {
-      // Reset to beginning
-      setActiveCardIndex(0)
-      setCardStack([...cards])
+    const nextIndex = activeCardIndex + 1
+    setActiveCardIndex(nextIndex)
+    
+    // Add more cards to stack when running low (infinite cycling)
+    if (nextIndex > cardStack.length - 3) {
+      setCardStack([...cardStack, ...cards])
     }
   }
 
@@ -64,21 +64,23 @@ export default function CardStack({
     }
     
     // Move to next card
-    if (activeCardIndex < cardStack.length - 1) {
-      setActiveCardIndex(activeCardIndex + 1)
-    } else {
-      setActiveCardIndex(0)
-      setCardStack([...cards])
+    const nextIndex = activeCardIndex + 1
+    setActiveCardIndex(nextIndex)
+    
+    // Add more cards to stack when running low (infinite cycling)
+    if (nextIndex > cardStack.length - 3) {
+      setCardStack([...cardStack, ...cards])
     }
   }
 
   const handleSwipeUp = () => {
     // SKIP action - swipe up
-    if (activeCardIndex < cardStack.length - 1) {
-      setActiveCardIndex(activeCardIndex + 1)
-    } else {
-      setActiveCardIndex(0)
-      setCardStack([...cards])
+    const nextIndex = activeCardIndex + 1
+    setActiveCardIndex(nextIndex)
+    
+    // Add more cards to stack when running low (infinite cycling)
+    if (nextIndex > cardStack.length - 3) {
+      setCardStack([...cardStack, ...cards])
     }
   }
 
@@ -111,7 +113,7 @@ export default function CardStack({
 
           return (
             <div
-              key={card.id}
+              key={`${index}-${card.id}`}
               className="absolute transition-all duration-500 ease-out"
               style={{
                 transform: `translateY(${yOffset}px) translateX(${xOffset}px) rotate(${rotation}deg) scale(${scale})`,
@@ -129,14 +131,32 @@ export default function CardStack({
                 />
               ) : (
                 <div 
-                  className="rounded-3xl shadow-2xl"
+                  className="rounded-3xl shadow-2xl relative p-6 flex flex-col justify-between overflow-hidden"
                   style={{
                     background: 'linear-gradient(135deg, #F7E595 0%, #F0C155 100%)',
                     width: '90vw',
                     maxWidth: '390px',
                     aspectRatio: '2 / 3',
                   }}
-                />
+                >
+                  {/* Display transaction data on background cards */}
+                  <div className="text-center z-10">
+                    <p className="text-sm font-bold text-gray-700">{card.title}</p>
+                  </div>
+                  
+                  {/* Show transaction status if this position has transaction data */}
+                  {transactionHistory.length > 0 && index - 1 < transactionHistory.length && (
+                    <div className="absolute inset-0 rounded-3xl bg-black bg-opacity-50 flex flex-col items-center justify-center z-20">
+                      <div className="text-white text-center space-y-2">
+                        <p className="text-sm font-bold">Last Approved</p>
+                        <p className="text-xs">{transactionHistory[transactionHistory.length - 1].card.title}</p>
+                        <p className={`text-lg font-bold ${transactionHistory[transactionHistory.length - 1].action === 'YES' ? 'text-green-400' : 'text-red-400'}`}>
+                          {transactionHistory[transactionHistory.length - 1].action}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )
