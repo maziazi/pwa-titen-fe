@@ -22,7 +22,7 @@ export default function SwipeCard({
   onDoubleTap,
 }: SwipeCardProps) {
   const [cardState, setCardState] = useState<CardState>('yellow')
-  const [nominal, setNominal] = useState(500000)
+  const [nominal, setNominal] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dragX, setDragX] = useState(0)
   const [dragY, setDragY] = useState(0)
@@ -34,8 +34,37 @@ export default function SwipeCard({
   const noPercentage = card.noPercentage || 68
   const volume = card.volume || '$1m'
   const category = card.category || 'Sports - Football - LaLiga'
-  const status = card.status || 'Open • Ends in 3d'
   const isNew = card.isNew !== false
+
+  // Calculate time remaining dynamically
+  const getTimeRemaining = () => {
+    if (!card.status) return 'Open • Ends in 3d'
+    
+    // Extract date and time from card.status (format: "Open • Ends 2024-10-27 14:30")
+    const match = card.status.match(/Ends (.+)/)
+    if (!match) return card.status
+    
+    const endDateStr = match[1]
+    const endDate = new Date(endDateStr)
+    const now = new Date()
+    const diffMs = endDate.getTime() - now.getTime()
+    
+    if (diffMs <= 0) return 'Closed'
+    
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+    
+    if (diffDays >= 1) {
+      return `Open • Ends in ${diffDays}d`
+    } else if (diffHours >= 1) {
+      return `Open • Ends in ${diffHours}h`
+    } else {
+      return `Open • Ends in ${diffMinutes}m`
+    }
+  }
+
+  const status = getTimeRemaining()
 
   const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now()
@@ -270,31 +299,27 @@ export default function SwipeCard({
           </div>
 
           {/* Image Section - Prominent with Overlay */}
-          <div className="w-full flex-1 bg-gradient-to-br from-gray-700 to-gray-900 rounded-3xl flex flex-col items-center justify-between border-3 border-gray-700 shadow-xl overflow-hidden relative my-2">
-            {/* Image Background Placeholder */}
-            <div className="absolute inset-0 bg-gray-800 opacity-60"></div>
+          <div className="w-full flex-1 bg-gradient-to-br from-gray-700 to-gray-900 rounded-3xl flex flex-col items-center justify-between shadow-xl overflow-hidden relative my-2">
+            {/* Image from Database or Placeholder */}
+            {card.image ? (
+              <img 
+                src={card.image} 
+                alt={card.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const parent = e.currentTarget.parentElement
+                  if (parent) {
+                    parent.innerHTML = '<div class="absolute inset-0 bg-gray-800 opacity-60 flex items-center justify-center"><span class="text-5xl">📷</span></div>'
+                  }
+                }}
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gray-800 opacity-60"></div>
+            )}
             
-            {/* Teams/Logo Section */}
-            <div className="relative w-full flex-1 flex items-center justify-center gap-6 pt-6">
-              <div className="text-center">
-                <div className="text-5xl mb-2">⚽</div>
-                <div className="text-sm text-white font-bold text-center">Team 1</div>
-              </div>
-              <div className="text-white text-2xl font-bold">VS</div>
-              <div className="text-center">
-                <div className="text-5xl mb-2">⚽</div>
-                <div className="text-sm text-white font-bold text-center">Team 2</div>
-              </div>
-            </div>
-
-            {/* Date/Time and Location Info */}
-            <div className="relative w-full bg-black bg-opacity-60 px-4 py-4 text-center space-y-1.5">
-              <div className="text-sm text-white font-semibold">27 Oktober 2024 | Pukul 02.00 WIB</div>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-lg">📍</span>
-                <span className="text-sm text-white font-semibold">Santiago Bernabéu</span>
-              </div>
-            </div>
+            {/* Overlay with gradient for readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-50"></div>
           </div>
 
           {/* Bottom Section - Percentages, Volume, Category */}

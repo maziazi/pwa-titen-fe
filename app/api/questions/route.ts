@@ -129,7 +129,7 @@ export async function GET() {
       symbol: q.symbol,
       description: q.description,
       image: q.photo_url,
-      status: `Open • Ends ${q.end_date}`,
+      status: `Open • Ends ${q.end_date} ${q.end_time}`,
       isNew: q.is_new,
       yesPercentage: q.yes_percentage,
       noPercentage: q.no_percentage,
