@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
+  other: {
+    'base:app_id': '6975d3793a92926b661fd488',
+  },
 }
 
 export default function RootLayout({
