@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Poppins } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { Providers } from '@/components/Providers' // 👈 1. Import Providers yang baru dibuat
 
 const _poppins = Poppins({ weight: ['400', '500', '600', '700'], subsets: ['latin'] });
 
@@ -45,8 +46,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
-        {children}
+      {/* Jika ingin font Poppins aktif, biasanya tambahkan _poppins.className di sini */}
+      <body className={`font-sans antialiased ${_poppins.className}`}> 
+        
+        {/* 👇 2. Bungkus aplikasi (children) dengan Providers */}
+        <Providers>
+          {children}
+        </Providers>
+
         <Analytics />
       </body>
     </html>

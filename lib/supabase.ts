@@ -8,6 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Database types
 export interface Question {
   id: string
+  market_id: number | null; // ✅ INI WAJIB ADA: Jembatan ke Smart Contract
   title: string
   description: string | null
   end_date: string

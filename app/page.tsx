@@ -8,6 +8,9 @@ import ActivityPage from '@/components/ActivityPage'
 import SubmitQuestionModal from '@/components/SubmitQuestionModal'
 import Toast from '@/components/Toast'
 import type { QuestionSubmission } from '@/components/SubmitQuestionModal'
+import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
+import { useMarkets } from '@/hooks/useMarkets'
+import { coinbaseWallet } from 'wagmi/connectors'
 
 export interface Card {
   id: string
@@ -25,159 +28,72 @@ export interface Card {
 
 const mockCards: Card[] = [
   {
-    id: '1',
-    title: 'Real Madrid vs Barcelona',
-    symbol: 'FOOTBALL',
-    description: 'Will Real Madrid win the El Clásico?',
-    status: 'Open • Ends in 3d',
-    isNew: true,
-    yesPercentage: 32,
-    noPercentage: 68,
-    volume: '$1.2m',
-    category: 'Sports - Football - LaLiga',
-  },
-  {
-    id: '2',
-    title: 'Will BTC reach $100k?',
-    symbol: 'BTC',
-    description: 'Bitcoin price prediction by end of month',
-    status: 'Open • Ends in 12h',
+    id: 'mock-1',
+    title: 'Loading Markets...',
+    symbol: 'WAIT',
+    description: 'Fetching latest data from Base...',
+    status: 'Loading',
     isNew: false,
-    yesPercentage: 45,
-    noPercentage: 55,
-    volume: '$2.8m',
-    category: 'Crypto - Bitcoin - Price',
-  },
-  {
-    id: '3',
-    title: 'Trump 2024 Election',
-    symbol: 'POLITICS',
-    description: 'Will Trump win the 2024 election?',
-    status: 'Open • Ends in 45m',
-    isNew: true,
-    yesPercentage: 52,
-    noPercentage: 48,
-    volume: '$5.5m',
-    category: 'Politics - Election - USA',
-  },
-  {
-    id: '4',
-    title: 'Apple Q4 Earnings Beat',
-    symbol: 'AAPL',
-    description: 'Will Apple beat earnings expectations?',
-    status: 'Closed • Resolving',
-    isNew: false,
-    yesPercentage: 38,
-    noPercentage: 62,
-    volume: '$3.2m',
-    category: 'Tech - Stocks - Apple',
-  },
-  {
-    id: '5',
-    title: 'Tesla Stock Above $300',
-    symbol: 'TSLA',
-    description: 'Will Tesla stock reach $300 by Q2?',
-    status: 'Resolved • YES',
-    isNew: false,
-    yesPercentage: 75,
-    noPercentage: 25,
-    volume: '$1.8m',
-    category: 'Tech - Stocks - Tesla',
-  },
-  {
-    id: '6',
-    title: 'Will AI Reach AGI in 2025?',
-    symbol: 'AI',
-    description: 'Artificial General Intelligence achievable this year?',
-    status: 'Open • Ends in 8d',
-    isNew: true,
-    yesPercentage: 28,
-    noPercentage: 72,
-    volume: '$4.1m',
-    category: 'Tech - AI - AGI',
-  },
-  {
-    id: '7',
-    title: 'S&P 500 New All-Time High',
-    symbol: 'SPX',
-    description: 'Will S&P 500 hit new all-time high this month?',
-    status: 'Open • Ends in 7d',
-    isNew: false,
-    yesPercentage: 61,
-    noPercentage: 39,
-    volume: '$2.3m',
-    category: 'Finance - Stocks - Index',
-  },
-  {
-    id: '8',
-    title: 'Ethereum Flips Bitcoin',
-    symbol: 'ETH',
-    description: 'Will Ethereum market cap exceed Bitcoin?',
-    status: 'Open • Ends in 15d',
-    isNew: false,
-    yesPercentage: 19,
-    noPercentage: 81,
-    volume: '$1.5m',
-    category: 'Crypto - Ethereum - Market',
-  },
-  {
-    id: '9',
-    title: 'Next iPhone Has No Ports',
-    symbol: 'AAPL',
-    description: 'Will the next iPhone be completely wireless?',
-    status: 'Open • Ends in 5d',
-    isNew: true,
-    yesPercentage: 42,
-    noPercentage: 58,
-    volume: '$890k',
-    category: 'Tech - Apple - iPhone',
-  },
-  {
-    id: '10',
-    title: 'World Cup 2026 Winner',
-    symbol: 'SPORTS',
-    description: 'Will Argentina win the 2026 World Cup?',
-    status: 'Open • Ends in 120d',
-    isNew: false,
-    yesPercentage: 18,
-    noPercentage: 82,
-    volume: '$6.7m',
-    category: 'Sports - Football - World Cup',
-  },
+    yesPercentage: 50,
+    noPercentage: 50,
+    volume: '0',
+    category: 'System',
+  }
 ]
 
 export default function Home() {
+  // Fix Hydration: State untuk cek apakah sudah di client
+  const [isMounted, setIsMounted] = useState(false);
+
   const [currentTab, setCurrentTab] = useState('markets')
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [transactionHistory, setTransactionHistory] = useState<any[]>([])
-  const [cards, setCards] = useState<Card[]>(mockCards)
-  const [loading, setLoading] = useState(false)
+  const [cards, setCards] = useState<Card[]>([]) 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>(
     { message: '', type: 'success', isVisible: false }
   )
 
-  // Fetch approved questions from database
-  useEffect(() => {
-    fetchQuestions()
-  }, [])
+  const { address, isConnected } = useAccount()
+  const { disconnect } = useDisconnect()
+  const { connect } = useConnect()
+  const { data: balanceData } = useBalance({ address })
+  const { markets: realMarkets, isLoading } = useMarkets()
 
-  const fetchQuestions = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/questions')
-      const result = await response.json()
-      
-      if (result.success && result.data.length > 0) {
-        setCards(result.data)
-      }
-    } catch (error) {
-      console.error('Error fetching questions:', error)
-      // Keep using mock data if API fails
-    } finally {
-      setLoading(false)
+  // 1. Set Mounted true setelah render pertama di client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 2. Update Cards saat data masuk
+  useEffect(() => {
+    if (realMarkets.length > 0) {
+      const formattedCards: Card[] = realMarkets.map((m) => {
+        const cardId = m.marketId !== null ? m.marketId.toString() : `upcoming-${m.db_id}`
+        return {
+          id: cardId,
+          title: m.title,
+          symbol: m.category ? m.category.substring(0, 8).toUpperCase() : 'GENERAL',
+          description: m.description,
+          image: m.image,
+          status: m.status,
+          isNew: m.status === 'Live',
+          yesPercentage: m.yesPercentage,
+          noPercentage: m.noPercentage,
+          volume: `${m.volume} IDRX`,
+          category: m.category,
+        }
+      })
+      setCards(formattedCards)
+    } else if (!isLoading && realMarkets.length === 0) {
+      // Jika loading selesai tapi tidak ada data, kosongkan atau pakai mock
+      setCards([]) 
     }
+  }, [realMarkets, isLoading])
+
+  const handleLogin = () => {
+    connect({ connector: coinbaseWallet({ appName: 'TITEN' }) })
   }
 
   const handleAddTransaction = (transaction: any) => {
@@ -185,85 +101,63 @@ export default function Home() {
   }
 
   const handleSubmitQuestion = async (data: QuestionSubmission) => {
-    try {
-      const formData = new FormData()
-      formData.append('title', data.question)
-      formData.append('description', data.question)
-      formData.append('endDate', data.endDate)
-      formData.append('endTime', data.endTime)
-      formData.append('category', data.categories[0] || 'General')
-      if (data.photo) {
-        formData.append('photo', data.photo)
-      }
-
-      const response = await fetch('/api/questions', {
-        method: 'POST',
-        body: formData
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        console.log('Question submitted successfully:', result)
-        setToast({
-          message: 'Question submitted! Waiting for admin approval.',
-          type: 'success',
-          isVisible: true
-        })
-        setShowSubmitModal(false)
-        // Optionally refresh the questions list
-        fetchQuestions()
-      } else {
-        console.error('Error submitting question:', result.error)
-        setToast({
-          message: 'Failed to submit question. Please try again.',
-          type: 'error',
-          isVisible: true
-        })
-      }
-    } catch (error) {
-      console.error('Error submitting question:', error)
-      setToast({
-        message: 'Failed to submit question. Please try again.',
-        type: 'error',
-        isVisible: true
-      })
-    }
+      console.log("Submitting:", data);
+      setShowSubmitModal(false);
+      setToast({ message: 'Question submitted! Waiting for approval.', type: 'success', isVisible: true });
   }
 
-  const setShowModal = (value: boolean) => {
-    setShowDetailModal(value)
+  const formatAddress = (addr: string | undefined) => {
+    if (!addr) return '...'
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
-  const showModal = showDetailModal
+  // Prevent Hydration Mismatch: Jangan render konten berat sebelum mounted
+  if (!isMounted) return null;
 
   return (
     <div className="flex flex-col w-screen h-screen" style={{ backgroundColor: '#FCF9E1' }}>
-      {/* Header */}
+      {/* HEADER */}
       <div className="px-6 py-5 flex items-center justify-between border-b border-yellow-200">
+        
         {/* Left: Account Section */}
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 flex items-center justify-center text-2xl font-bold shadow-md">
-            💰
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-base text-gray-900">10 IDRX</span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700 font-medium">0x2334....3222</span>
-              <button 
-                className="p-1.5 hover:bg-yellow-100 rounded-lg transition-colors"
-                title="Copy address"
-              >
-                <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
+        {isConnected ? (
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 flex items-center justify-center text-2xl font-bold shadow-md">
+              💰
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-base text-gray-900">
+                {balanceData ? `${parseFloat(balanceData.formatted).toFixed(4)} ETH` : 'Loading...'}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700 font-medium">
+                  {formatAddress(address)}
+                </span>
+                <button 
+                  onClick={() => disconnect()} 
+                  className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                  title="Disconnect"
+                >
+                  <svg className="w-4 h-4 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                   <polyline points="16 17 21 12 16 7"></polyline>
+                   <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <button 
+            onClick={handleLogin}
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full font-bold shadow-lg hover:scale-105 transition-transform"
+          >
+            <span>⚡ Connect Wallet</span>
+          </button>
+        )}
+
         {/* Right: Add Question Button */}
-        {currentTab === 'markets' && (
+        {currentTab === 'markets' && isConnected && (
           <button 
             onClick={() => setShowSubmitModal(true)}
             className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg hover:shadow-xl transition-shadow active:scale-95"
@@ -278,16 +172,17 @@ export default function Home() {
         )}
       </div>
 
-      {/* Content */}
+      {/* CONTENT */}
       <div className="flex-1 overflow-hidden">
         {currentTab === 'markets' && (
-          loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-gray-600 font-medium">Loading questions...</div>
+          isLoading && cards.length === 0 ? (
+            <div className="flex items-center justify-center h-full flex-col gap-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <div className="text-gray-600 font-medium animate-pulse">Loading markets...</div>
             </div>
           ) : (
             <CardStack 
-              cards={cards} 
+              cards={cards.length > 0 ? cards : mockCards} 
               onCardDoubleTap={(card) => {
                 setSelectedCard(card)
                 setShowDetailModal(true)
@@ -301,14 +196,13 @@ export default function Home() {
         )}
       </div>
 
-      {/* Detail Modal */}
+      {/* MODALS & NAVIGATION */}
       <DetailModal 
         card={selectedCard}
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
       />
 
-      {/* Submit Question Modal */}
       <SubmitQuestionModal
         isOpen={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
@@ -320,7 +214,6 @@ export default function Home() {
         onTabChange={setCurrentTab}
       />
 
-      {/* Toast Notification */}
       <Toast
         message={toast.message}
         type={toast.type}

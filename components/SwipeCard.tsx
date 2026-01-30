@@ -30,42 +30,14 @@ export default function SwipeCard({
   const containerRef = useRef<HTMLDivElement>(null)
   const touchStartRef = useRef({ x: 0, y: 0, time: 0 })
 
-  const yesPercentage = card.yesPercentage || 32
-  const noPercentage = card.noPercentage || 68
-  const volume = card.volume || '$1m'
-  const category = card.category || 'Sports - Football - LaLiga'
-  const isNew = card.isNew !== false
+  // Data helpers
+  const yesPercentage = card.yesPercentage || 50
+  const noPercentage = card.noPercentage || 50
+  const volume = card.volume || '0 IDRX'
+  const category = card.category || 'General'
+  const isNew = card.isNew === true
 
-  // Calculate time remaining dynamically
-  const getTimeRemaining = () => {
-    if (!card.status) return 'Open • Ends in 3d'
-    
-    // Extract date and time from card.status (format: "Open • Ends 2024-10-27 14:30")
-    const match = card.status.match(/Ends (.+)/)
-    if (!match) return card.status
-    
-    const endDateStr = match[1]
-    const endDate = new Date(endDateStr)
-    const now = new Date()
-    const diffMs = endDate.getTime() - now.getTime()
-    
-    if (diffMs <= 0) return 'Closed'
-    
-    const diffMinutes = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
-    if (diffDays >= 1) {
-      return `Open • Ends in ${diffDays}d`
-    } else if (diffHours >= 1) {
-      return `Open • Ends in ${diffHours}h`
-    } else {
-      return `Open • Ends in ${diffMinutes}m`
-    }
-  }
-
-  const status = getTimeRemaining()
-
+  // Handle Double Tap
   const handleTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
     const now = Date.now()
     const timeSinceLastTap = now - lastTapTime
@@ -96,6 +68,7 @@ export default function SwipeCard({
     setDragX(deltaX)
     setDragY(deltaY)
 
+    // Animasi drag sederhana
     if (containerRef.current) {
       containerRef.current.style.transform = `translateX(${deltaX * 0.5}px) translateY(${deltaY * 0.5}px)`
     }
@@ -108,149 +81,121 @@ export default function SwipeCard({
     const swipeThreshold = 80
     const swipeUpThreshold = 150
 
-    // Yellow Card States
+    // Logic Yellow Card (Kartu Utama)
     if (cardState === 'yellow') {
-      // Swipe Up - SKIP to next card
+      // Swipe Up - SKIP
       if (dragY < -swipeUpThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.4s ease-out'
-          containerRef.current.style.transform = 'translateY(-500px) rotate(0deg)'
-          setTimeout(() => {
-            resetCard()
-            onSwipeUp()
-          }, 400)
-        }
+        animateSwipeUp()
         return
       }
 
-      // Swipe Right - Show green card
+      // Swipe Right - Trigger GREEN Mode
       if (dragX > swipeThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.4s ease-out'
-          containerRef.current.style.transform = `translateX(100px) rotate(5deg)`
-        }
         setCardState('green')
-        setDragX(0)
-        setDragY(0)
+        resetPosition()
         return
       }
 
-      // Swipe Left - Show red card
+      // Swipe Left - Trigger RED Mode
       if (dragX < -swipeThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.4s ease-out'
-          containerRef.current.style.transform = `translateX(-100px) rotate(-5deg)`
-        }
         setCardState('red')
-        setDragX(0)
-        setDragY(0)
+        resetPosition()
         return
       }
     }
 
-    // Red/Green Card States
+    // Logic Confirmation Cards (Red/Green)
     if (cardState === 'red') {
-      // Swipe Left - Complete NO trade
+      // Confirm NO (Swipe Left again)
       if (dragX < -swipeThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.5s ease-out'
-          containerRef.current.style.transform = 'translateX(-500px) rotate(-30deg)'
-          setTimeout(() => {
-            resetCard()
-            onSwipeLeft(nominal)
-          }, 500)
-        }
+        animateSwipeLeft()
         return
       }
-
-      // Swipe Right - Go back to yellow
+      // Cancel (Swipe Right)
       if (dragX > swipeThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.3s ease-out'
-          containerRef.current.style.transform = 'translateX(0) rotate(0deg)'
-        }
         setCardState('yellow')
-        setDragX(0)
-        setDragY(0)
+        resetPosition()
         return
       }
     }
 
     if (cardState === 'green') {
-      // Swipe Right - Complete YES trade
+      // Confirm YES (Swipe Right again)
       if (dragX > swipeThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.5s ease-out'
-          containerRef.current.style.transform = 'translateX(500px) rotate(30deg)'
-          setTimeout(() => {
-            resetCard()
-            onSwipeRight(nominal)
-          }, 500)
-        }
+        animateSwipeRight()
         return
       }
-
-      // Swipe Left - Go back to yellow
+      // Cancel (Swipe Left)
       if (dragX < -swipeThreshold) {
-        if (containerRef.current) {
-          containerRef.current.style.transition = 'transform 0.3s ease-out'
-          containerRef.current.style.transform = 'translateX(0) rotate(0deg)'
-        }
         setCardState('yellow')
-        setDragX(0)
-        setDragY(0)
+        resetPosition()
         return
       }
     }
 
-    // Reset if threshold not reached
-    resetCard()
+    resetPosition()
   }
 
-  const resetCard = () => {
+  // --- Animation Helpers ---
+  const animateSwipeUp = () => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s ease-out'
+      containerRef.current.style.transform = 'translateY(-100vh) rotate(0deg)' // Lempar jauh ke atas
+      setTimeout(() => {
+        resetCardState()
+        onSwipeUp()
+      }, 300)
+    }
+  }
+
+  const animateSwipeRight = () => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.5s ease-out'
+      containerRef.current.style.transform = 'translateX(100vw) rotate(30deg)'
+      setTimeout(() => {
+        resetCardState()
+        onSwipeRight(nominal)
+      }, 300)
+    }
+  }
+
+  const animateSwipeLeft = () => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.5s ease-out'
+      containerRef.current.style.transform = 'translateX(-100vw) rotate(-30deg)'
+      setTimeout(() => {
+        resetCardState()
+        onSwipeLeft(nominal)
+      }, 300)
+    }
+  }
+
+  const resetPosition = () => {
     if (containerRef.current) {
       containerRef.current.style.transition = 'transform 0.3s ease-out'
       containerRef.current.style.transform = 'translateX(0) translateY(0) rotate(0deg)'
+      setDragX(0)
+      setDragY(0)
     }
+  }
+
+  const resetCardState = () => {
+    // Reset visual state for the next card reuse
+    resetPosition()
+    setCardState('yellow')
     setDragX(0)
     setDragY(0)
   }
-
-  const handleTouchCancel = () => {
-    setIsDragging(false)
-    resetCard()
-  }
-
+  
+  // Handler untuk TradeCard Component
   const handleTrade = () => {
-    if (cardState === 'red') {
-      if (containerRef.current) {
-        containerRef.current.style.transition = 'transform 0.5s ease-out'
-        containerRef.current.style.transform = 'translateX(-500px) rotate(-30deg)'
-        setTimeout(() => {
-          resetCard()
-          setCardState('yellow')
-          onSwipeLeft(nominal)
-        }, 500)
-      }
-    } else if (cardState === 'green') {
-      if (containerRef.current) {
-        containerRef.current.style.transition = 'transform 0.5s ease-out'
-        containerRef.current.style.transform = 'translateX(500px) rotate(30deg)'
-        setTimeout(() => {
-          resetCard()
-          setCardState('yellow')
-          onSwipeRight(nominal)
-        }, 500)
-      }
-    }
+      if (cardState === 'green') animateSwipeRight()
+      if (cardState === 'red') animateSwipeLeft()
   }
 
   const handleSwipeCard = (direction: 'left' | 'right') => {
-    if (direction === 'right' && cardState === 'green') {
-      handleTrade()
-    } else if (direction === 'left' && cardState === 'red') {
-      handleTrade()
-    }
+      if (direction === 'right' && cardState === 'green') animateSwipeRight()
+      if (direction === 'left' && cardState === 'red') animateSwipeLeft()
   }
 
   return (
@@ -276,76 +221,50 @@ export default function SwipeCard({
       {/* Yellow Card */}
       {cardState === 'yellow' && (
         <div
-          className="absolute inset-0 rounded-4xl shadow-2xl p-6 flex flex-col justify-between overflow-hidden"
+          className="absolute inset-0 rounded-4xl shadow-2xl p-6 flex flex-col justify-between overflow-hidden bg-white border-4 border-yellow-300"
           style={{
-            background: 'linear-gradient(135deg, #F7E595 0%, #F0C155 100%)',
+             background: 'linear-gradient(135deg, #FFFDE7 0%, #FFF59D 100%)',
           }}
         >
-          {/* Top Section - Status & New Badge */}
-          <div className="flex items-center justify-between w-full gap-4 z-10">
-            <div className="bg-white px-5 py-2.5 rounded-full text-xs font-bold shadow-md border-2" style={{ borderColor: '#5799E9', color: '#5799E9' }}>
-              {status}
-            </div>
-            {isNew && (
-              <div className="text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-md" style={{ background: 'linear-gradient(135deg, #5799E9 0%, #95C5FF 100%)' }}>
-                New
-              </div>
-            )}
+          {/* Header */}
+          <div className="flex justify-between items-start z-10">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${card.status === 'Live' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {card.status || 'Upcoming'}
+            </span>
+            {isNew && <span className="bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-bold">NEW</span>}
           </div>
 
-          {/* Title Section */}
-          <div className="text-center z-10 mt-2">
-            <h2 className="text-2xl font-bold text-gray-900 leading-tight">{card.title}</h2>
+          {/* Question */}
+          <h2 className="text-2xl font-bold text-gray-900 leading-tight mt-2 z-10">{card.title}</h2>
+
+          {/* Image */}
+          <div className="flex-1 my-4 relative rounded-2xl overflow-hidden shadow-inner bg-gray-200">
+             <img src={card.image} alt="prediction" className="object-cover w-full h-full" />
+             {/* Gradient Overlay */}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
           </div>
 
-          {/* Image Section - Prominent with Overlay */}
-          <div className="w-full flex-1 bg-gradient-to-br from-gray-700 to-gray-900 rounded-3xl flex flex-col items-center justify-between shadow-xl overflow-hidden relative my-2">
-            {/* Image from Database or Placeholder */}
-            {card.image ? (
-              <img 
-                src={card.image} 
-                alt={card.title}
-                className="absolute inset-0 w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                  const parent = e.currentTarget.parentElement
-                  if (parent) {
-                    parent.innerHTML = '<div class="absolute inset-0 bg-gray-800 opacity-60 flex items-center justify-center"><span class="text-5xl">📷</span></div>'
-                  }
-                }}
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gray-800 opacity-60"></div>
-            )}
-            
-            {/* Overlay with gradient for readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-50"></div>
-          </div>
-
-          {/* Bottom Section - Percentages, Volume, Category */}
-          <div className="w-full space-y-3.5 z-10">
-            {/* Percentage Buttons */}
-            <div className="grid grid-cols-2 gap-4">
-              <button className="py-5 px-3 rounded-3xl font-bold transition-all active:scale-95 shadow-lg border-2 border-[#FE7B72] bg-[#FE7B72] text-[#CC0D00] hover:bg-[#CC0D00] hover:text-white flex items-center justify-center gap-2">
-                <span className="text-2xl font-black">{noPercentage}%</span>
-                <span className="text-2xl font-black">No</span>
-              </button>
-              <button className="py-5 px-3 rounded-3xl font-bold transition-all active:scale-95 shadow-lg border-2 border-[#94E172] bg-[#94E172] text-[#2A8300] hover:bg-[#2A8300] hover:text-white flex items-center justify-center gap-2">
-                <span className="text-2xl font-black">{yesPercentage}%</span>
-                <span className="text-2xl font-black">Yes</span>
-              </button>
-            </div>
-
-            {/* Volume and Category - Bottom Left */}
-            <div className="flex gap-2 text-sm text-gray-800 font-bold">
-              <div>{volume} Vol</div>
-              <div>{category}</div>
-            </div>
+          {/* Stats */}
+          <div className="z-10">
+             <div className="flex justify-between items-center mb-3">
+                <div className="text-center w-1/2 border-r border-gray-300">
+                   <div className="text-2xl font-black text-green-600">{yesPercentage}%</div>
+                   <div className="text-xs text-gray-500 font-bold uppercase">YES Pool</div>
+                </div>
+                <div className="text-center w-1/2">
+                   <div className="text-2xl font-black text-red-500">{noPercentage}%</div>
+                   <div className="text-xs text-gray-500 font-bold uppercase">NO Pool</div>
+                </div>
+             </div>
+             <div className="flex justify-between text-xs font-bold text-gray-400 border-t border-gray-200 pt-3">
+                 <span>{volume}</span>
+                 <span>{category}</span>
+             </div>
           </div>
         </div>
       )}
 
-      {/* Red/Green Trade Card (Behind) */}
+      {/* Trade Card (Overlay) */}
       {cardState !== 'yellow' && (
         <div className="absolute inset-0">
           <TradeCard
