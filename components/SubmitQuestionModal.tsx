@@ -126,22 +126,20 @@ export default function SubmitQuestionModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center ${
-        isClosing ? 'animate-out fade-out duration-300' : 'animate-in fade-in'
-      }`}
+      className={`fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center ${isClosing ? 'animate-out fade-out duration-300' : 'animate-in fade-in'
+        }`}
       onClick={handleClose}
     >
       <div
-        className={`w-full md:max-w-2xl rounded-t-4xl md:rounded-3xl shadow-2xl ${
-          isClosing 
-            ? 'animate-out slide-out-to-bottom md:slide-out-to-center duration-300' 
+        className={`w-full md:max-w-2xl rounded-t-4xl md:rounded-3xl shadow-2xl ${isClosing
+            ? 'animate-out slide-out-to-bottom md:slide-out-to-center duration-300'
             : 'animate-in slide-in-from-bottom md:slide-in-from-center duration-300'
-        } max-h-[90vh] overflow-y-auto`}
+          } max-h-[90vh] overflow-y-auto`}
         style={{ backgroundColor: '#FCF9E1' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle Bar */}
-        <div 
+        <div
           className="flex justify-center py-4 md:hidden cursor-grab active:cursor-grabbing"
           onTouchStart={(e) => setTouchStart(e.touches[0].clientY)}
           onTouchMove={(e) => setTouchEnd(e.touches[0].clientY)}
@@ -234,7 +232,7 @@ export default function SubmitQuestionModal({
             {photoPreview ? (
               <div className="relative">
                 <img
-                  src={photoPreview || "/placeholder.svg"}
+                  src={photoPreview || "/Logo-Titen.png"}
                   alt="Preview"
                   className="w-full h-40 object-cover rounded-lg border-2 border-gray-300"
                 />
@@ -282,11 +280,10 @@ export default function SubmitQuestionModal({
                 <button
                   key={category}
                   onClick={() => toggleCategory(category)}
-                  className={`px-4 py-2 rounded-full font-semibold text-sm transition-all border-2 ${
-                    selectedCategories.includes(category)
+                  className={`px-4 py-2 rounded-full font-semibold text-sm transition-all border-2 ${selectedCategories.includes(category)
                       ? 'text-white border-blue-600'
                       : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                  }`}
+                    }`}
                   style={selectedCategories.includes(category) ? { background: 'linear-gradient(135deg, #5799E9 0%, #95C5FF 100%)' } : undefined}
                   disabled={
                     !selectedCategories.includes(category) &&

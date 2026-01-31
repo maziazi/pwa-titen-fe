@@ -49,8 +49,8 @@ export default function Home() {
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [transactionHistory, setTransactionHistory] = useState<any[]>([])
-  const [cards, setCards] = useState<Card[]>([]) 
-  
+  const [cards, setCards] = useState<Card[]>([])
+
   // State Toast untuk notifikasi sukses
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>(
     { message: '', type: 'success', isVisible: false }
@@ -71,9 +71,9 @@ export default function Home() {
   // 2. Ambil Saldo IDRX User
   const { data: idrxBalance, refetch: refetchBalance } = useBalance({
     address: address,
-    token: idrxAddress as `0x${string}`, 
+    token: idrxAddress as `0x${string}`,
     query: {
-      enabled: !!address && !!idrxAddress, 
+      enabled: !!address && !!idrxAddress,
     }
   })
 
@@ -101,7 +101,7 @@ export default function Home() {
       })
       setCards(formattedCards)
     } else if (!isLoading && realMarkets.length === 0) {
-      setCards([]) 
+      setCards([])
     }
   }, [realMarkets, isLoading])
 
@@ -113,22 +113,22 @@ export default function Home() {
   const handleTransactionSuccess = async (transaction: any) => {
     // 1. Simpan history
     setTransactionHistory([transaction, ...transactionHistory])
-    
+
     // 2. Refresh saldo IDRX (Penting agar saldo berkurang di UI)
     await refetchBalance()
 
     // 3. Tampilkan Notifikasi Sukses
     setToast({
-        message: `Berhasil Stake ${transaction.action} pada ${transaction.card.title}!`,
-        type: 'success',
-        isVisible: true
+      message: `Berhasil Stake ${transaction.action} pada ${transaction.card.title}!`,
+      type: 'success',
+      isVisible: true
     })
   }
 
   const handleSubmitQuestion = async (data: QuestionSubmission) => {
-      console.log("Submitting:", data);
-      setShowSubmitModal(false);
-      setToast({ message: 'Question submitted! Waiting for approval.', type: 'success', isVisible: true });
+    console.log("Submitting:", data);
+    setShowSubmitModal(false);
+    setToast({ message: 'Question submitted! Waiting for approval.', type: 'success', isVisible: true });
   }
 
   const formatAddress = (addr: string | undefined) => {
@@ -141,60 +141,71 @@ export default function Home() {
   return (
     <div className="flex flex-col w-screen h-screen" style={{ backgroundColor: '#FCF9E1' }}>
       {/* HEADER */}
-      <div className="px-6 py-5 flex items-center justify-between border-b border-yellow-200">
-        
-        {/* Left: Account Section */}
-        {isConnected ? (
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 flex items-center justify-center text-2xl font-bold shadow-md">
-              💰
-            </div>
-            <div className="flex flex-col">
-              {/* HANYA TAMPILKAN IDRX & ADDRESS */}
-              <span className="font-bold text-base text-gray-900">
-                {idrxBalance ? `${parseFloat(idrxBalance.formatted).toFixed(2)} ${idrxBalance.symbol}` : 'Loading...'}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700 font-medium">
-                  {formatAddress(address)}
-                </span>
-                <button 
-                  onClick={() => disconnect()} 
-                  className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
-                  title="Disconnect"
-                >
-                  <svg className="w-4 h-4 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                   <polyline points="16 17 21 12 16 7"></polyline>
-                   <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <button 
-            onClick={handleLogin}
-            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full font-bold shadow-lg hover:scale-105 transition-transform"
-          >
-            <span>⚡ Connect Wallet</span>
-          </button>
-        )}
 
-        {/* Right: Add Question Button */}
-        {currentTab === 'markets' && isConnected && (
-          <button 
-            onClick={() => setShowSubmitModal(true)}
-            className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg hover:shadow-xl transition-shadow active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #5799E9 0%, #95C5FF 100%)' }}
-            title="Add new question"
-          >
-            <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
-        )}
+      <div className="px-6 py-5 flex items-center justify-between border-b border-yellow-200">
+
+        {/* Left: Branding */}
+        <div className="flex items-center gap-3">
+          <img src="/Logo-Titen.png" alt="Titen Logo" className="w-10 h-10 object-contain" />
+          <h1 className="font-bold text-lg text-gray-800 leading-tight">
+            Titen <br /> <span className="text-sm font-normal text-gray-500">Predictions market</span>
+          </h1>
+        </div>
+
+        {/* Right: Account Section & Add Button */}
+        <div className="flex items-center gap-3">
+          {isConnected ? (
+            <div className="flex items-center gap-2">
+              {/* Saldo Simple */}
+              <div className="flex flex-col items-end mr-1">
+                <span className="font-bold text-sm text-gray-900">
+                  {idrxBalance ? `${parseFloat(idrxBalance.formatted).toFixed(2)}` : '...'}
+                </span>
+                <span className="text-xs text-gray-500">IDRX</span>
+              </div>
+
+              {/* Avatar / Initial */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 flex items-center justify-center text-lg font-bold shadow-md">
+                💰
+              </div>
+
+              {/* Disconnect Tiny Button */}
+              <button
+                onClick={() => disconnect()}
+                className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+                title="Disconnect"
+              >
+                <svg className="w-4 h-4 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleLogin}
+              className="flex items-center gap-2 px-3 py-1.5 bg-black text-white text-sm rounded-full font-bold shadow-lg hover:scale-105 transition-transform"
+            >
+              <span>Connect</span>
+            </button>
+          )}
+
+          {/* Add Question Button */}
+          {currentTab === 'markets' && isConnected && (
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg hover:shadow-xl transition-shadow active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #5799E9 0%, #95C5FF 100%)' }}
+              title="Add new question"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* CONTENT */}
@@ -206,8 +217,8 @@ export default function Home() {
               <div className="text-gray-600 font-medium animate-pulse">Loading markets...</div>
             </div>
           ) : (
-            <CardStack 
-              cards={cards.length > 0 ? cards : mockCards} 
+            <CardStack
+              cards={cards.length > 0 ? cards : mockCards}
               onCardDoubleTap={(card) => {
                 setSelectedCard(card)
                 setShowDetailModal(true)
@@ -223,7 +234,7 @@ export default function Home() {
       </div>
 
       {/* MODALS */}
-      <DetailModal 
+      <DetailModal
         card={selectedCard}
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
@@ -235,8 +246,8 @@ export default function Home() {
         onSubmit={handleSubmitQuestion}
       />
 
-      <Navigation 
-        activeTab={currentTab} 
+      <Navigation
+        activeTab={currentTab}
         onTabChange={setCurrentTab}
       />
 

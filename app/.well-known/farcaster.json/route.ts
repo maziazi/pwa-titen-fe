@@ -17,7 +17,7 @@ export async function GET() {
     },
     miniapp: {
       version: "1",
-      name: "Social Flow",
+      name: "Titen",
       homeUrl: URL,
       iconUrl: `${URL}/icon.png`,
       splashImageUrl: `${URL}/splash.png`,
@@ -35,11 +35,11 @@ export async function GET() {
       tags: ["ai", "social-media", "web3", "monetization", "automation"],
       heroImageUrl: `${URL}/hero-image.png`,
       tagline: "Automate & Monetize On-Chain",
-      ogTitle: "Social Flow - AI Social Media Automation",
+      ogTitle: "Titen - AI Social Media Automation",
       ogDescription:
-        "Generate viral posts with AI and monetize through Web3 integration. Perfect for creators.",
+        "Prediction Market with AI Assistance. Swipe to predict and trade on future events seamlessly.",
       ogImageUrl: `${URL}/og-image.png`,
-      noindex: false,
+      noindex: true,
     },
   };
 
