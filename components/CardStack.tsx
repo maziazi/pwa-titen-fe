@@ -1,15 +1,15 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import SwipeCard from './SwipeCard'
 import { Card } from '@/app/page'
 
 // 🟢 Blockchain Imports
 import { useWriteContract, useReadContract, useAccount } from 'wagmi'
-import { waitForTransactionReceipt } from 'wagmi/actions' // Untuk menunggu transaksi selesai
-import { useConfig } from 'wagmi' // Config untuk actions
+import { waitForTransactionReceipt } from 'wagmi/actions' 
+import { useConfig } from 'wagmi' 
 import { PREDICTION_MARKET_ABI, PREDICTION_MARKET_ADDRESS } from '@/lib/contracts'
-import { erc20Abi, maxUint256 } from 'viem' // Standard ERC20 ABI
+import { erc20Abi, maxUint256, parseEther } from 'viem' // ✅ Tambah parseEther
 
 interface CardStackProps {
   cards: Card[]
@@ -23,41 +23,35 @@ export default function CardStack({
   onTransaction 
 }: CardStackProps) {
   const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [isProcessing, setIsProcessing] = useState(false)
+  
   const { address } = useAccount()
   const { writeContractAsync } = useWriteContract()
-  const config = useConfig() // Diperlukan untuk waitForTransactionReceipt
+  const config = useConfig() 
 
-  // 1. Ambil Address Token IDRX dari Smart Contract
+  // 1. Ambil Address Token
   const { data: idrxAddress } = useReadContract({
     address: PREDICTION_MARKET_ADDRESS,
     abi: PREDICTION_MARKET_ABI,
     functionName: 'idrx',
   })
 
-  // 2. Ambil Nominal Stake (misal 10 IDRX)
-  const { data: fixedStake } = useReadContract({
-    address: PREDICTION_MARKET_ADDRESS,
-    abi: PREDICTION_MARKET_ABI,
-    functionName: 'fixedStake',
-  })
+  // ❌ HAPUS: const { data: fixedStake } ... (Sudah tidak ada di contract)
 
-  // 3. Cek Allowance (Izin) User ke Contract Market
+  // 2. Cek Allowance
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: idrxAddress as `0x${string}`,
     abi: erc20Abi,
     functionName: 'allowance',
     args: address && idrxAddress ? [address, PREDICTION_MARKET_ADDRESS] : undefined,
-    query: {
-        enabled: !!address && !!idrxAddress
-    }
+    query: { enabled: !!address && !!idrxAddress }
   })
 
-  // Helper: Cek Valid Market ID
   const isValidMarketId = (id: string) => {
     return !id.startsWith('upcoming-') && !id.startsWith('mock-');
   }
 
-  // --- LOGIC UTAMA: APPROVE DULU, BARU STAKE ---
+  // --- LOGIC TRANSAKSI DINAMIS ---
   const handleTrade = async (side: 1 | 2, nominal: number, card: Card) => {
     if (!isValidMarketId(card.id)) {
       alert("Market ini belum live di blockchain (Upcoming/Demo)")
@@ -65,74 +59,77 @@ export default function CardStack({
       return
     }
 
-    if (!idrxAddress || fixedStake === undefined || allowance === undefined) {
+    if (!idrxAddress) {
       console.error("Data blockchain belum siap")
       return
     }
 
+    // ✅ CONVERT NOMINAL KE WEI (BigInt)
+    // Asumsi nominal dari UI adalah string/number biasa (misal 100), kita ubah jadi 1000000...
+    const stakeAmount = parseEther(nominal.toString());
+
+    setIsProcessing(true)
+
     try {
-      // LANGKAH A: Cek apakah butuh Approve?
-      if (allowance < fixedStake) {
-        console.log("⚠️ Allowance kurang. Meminta Approve dulu...")
-        
-        // 1. Kirim Transaksi Approve
+      // ✅ CEK APPROVE DINAMIS
+      // Bandingkan allowance dengan jumlah yang mau distake sekarang
+      if (allowance === undefined || allowance < stakeAmount) {
+        console.log(`⚠️ Meminta Approve untuk ${nominal} IDRX...`)
         const approveHash = await writeContractAsync({
           address: idrxAddress as `0x${string}`,
           abi: erc20Abi,
           functionName: 'approve',
-          args: [PREDICTION_MARKET_ADDRESS, maxUint256], // Izin unlimited biar gak tanya terus
+          args: [PREDICTION_MARKET_ADDRESS, maxUint256],
         })
-
-        console.log("⏳ Menunggu Approve dikonfirmasi blockchain...", approveHash)
         
-        // 2. Tunggu sampai Approve sukses di-mining
         await waitForTransactionReceipt(config, { hash: approveHash })
-        
-        console.log("✅ Approve Sukses! Lanjut Staking...")
-        // Refresh data allowance
         await refetchAllowance()
+        console.log("✅ Approve Selesai")
       }
 
-      // LANGKAH B: Lakukan Stake (Bayar IDRX)
-      console.log(`🚀 Staking ${side === 1 ? 'YES' : 'NO'} on Market ID: ${card.id}`)
-      
+      // ✅ STAKE DENGAN AMOUNT
+      console.log(`🚀 Staking ${nominal} IDRX ke Market ${card.id}...`)
       const stakeHash = await writeContractAsync({
         address: PREDICTION_MARKET_ADDRESS,
         abi: PREDICTION_MARKET_ABI,
         functionName: 'stake',
-        args: [BigInt(card.id), side], 
+        // Kirim 3 argumen: ID, SIDE, AMOUNT
+        args: [BigInt(card.id), side, stakeAmount], 
       })
 
-      console.log("✅ Stake Terkirim:", stakeHash)
+      console.log("⏳ Menunggu konfirmasi jaringan...")
+      await waitForTransactionReceipt(config, { hash: stakeHash })
+      console.log("✅ Stake Terkonfirmasi!")
 
-      // Update History Lokal
       if (onTransaction) {
         onTransaction({
           card: card,
           action: side === 1 ? 'YES' : 'NO',
-          nominal,
+          nominal: nominal, // Simpan angka asli buat history UI
           timestamp: new Date(),
         })
       }
 
     } catch (error) {
       console.error("❌ Transaksi Gagal:", error)
-      alert("Transaksi Gagal/Dibatalkan. Pastikan kamu punya saldo IDRX testnet.")
     } finally {
-      // Pindah kartu
+      setIsProcessing(false)
       advanceCard()
     }
   }
 
   const handleSwipeRight = (nominal: number) => {
-    handleTrade(1, nominal, cards[activeCardIndex]) // 1 = YES
+    if (isProcessing) return;
+    handleTrade(1, nominal, cards[activeCardIndex]) 
   }
 
   const handleSwipeLeft = (nominal: number) => {
-    handleTrade(2, nominal, cards[activeCardIndex]) // 2 = NO
+    if (isProcessing) return;
+    handleTrade(2, nominal, cards[activeCardIndex]) 
   }
 
   const handleSwipeUp = () => {
+    if (isProcessing) return;
     advanceCard()
   }
 
@@ -140,7 +137,6 @@ export default function CardStack({
     setActiveCardIndex((prev) => (prev + 1) % cards.length)
   }
 
-  // --- RENDER (Sama seperti sebelumnya) ---
   const activeCard = cards[activeCardIndex]
 
   if (!activeCard) {
@@ -153,6 +149,15 @@ export default function CardStack({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center pb-24">
+      {isProcessing && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/20 backdrop-blur-sm rounded-3xl">
+           <div className="bg-white px-6 py-4 rounded-xl shadow-xl flex flex-col items-center animate-bounce">
+              <span className="text-2xl">⏳</span>
+              <p className="font-bold text-gray-800">Processing...</p>
+           </div>
+        </div>
+      )}
+
       <div className="relative w-full flex-1 flex items-center justify-center px-3">
         {cards.map((card, index) => {
            if (index < activeCardIndex || index > activeCardIndex + 2) return null;

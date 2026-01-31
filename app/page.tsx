@@ -8,9 +8,10 @@ import ActivityPage from '@/components/ActivityPage'
 import SubmitQuestionModal from '@/components/SubmitQuestionModal'
 import Toast from '@/components/Toast'
 import type { QuestionSubmission } from '@/components/SubmitQuestionModal'
-import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useBalance, useReadContract } from 'wagmi'
 import { useMarkets } from '@/hooks/useMarkets'
 import { coinbaseWallet } from 'wagmi/connectors'
+import { PREDICTION_MARKET_ABI, PREDICTION_MARKET_ADDRESS } from '@/lib/contracts'
 
 export interface Card {
   id: string
@@ -42,15 +43,15 @@ const mockCards: Card[] = [
 ]
 
 export default function Home() {
-  // Fix Hydration: State untuk cek apakah sudah di client
   const [isMounted, setIsMounted] = useState(false);
-
   const [currentTab, setCurrentTab] = useState('markets')
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [transactionHistory, setTransactionHistory] = useState<any[]>([])
   const [cards, setCards] = useState<Card[]>([]) 
+  
+  // State Toast untuk notifikasi sukses
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>(
     { message: '', type: 'success', isVisible: false }
   )
@@ -58,15 +59,28 @@ export default function Home() {
   const { address, isConnected } = useAccount()
   const { disconnect } = useDisconnect()
   const { connect } = useConnect()
-  const { data: balanceData } = useBalance({ address })
   const { markets: realMarkets, isLoading } = useMarkets()
 
-  // 1. Set Mounted true setelah render pertama di client
+  // 1. Ambil Address Token IDRX
+  const { data: idrxAddress } = useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: PREDICTION_MARKET_ABI,
+    functionName: 'idrx',
+  })
+
+  // 2. Ambil Saldo IDRX User
+  const { data: idrxBalance, refetch: refetchBalance } = useBalance({
+    address: address,
+    token: idrxAddress as `0x${string}`, 
+    query: {
+      enabled: !!address && !!idrxAddress, 
+    }
+  })
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // 2. Update Cards saat data masuk
   useEffect(() => {
     if (realMarkets.length > 0) {
       const formattedCards: Card[] = realMarkets.map((m) => {
@@ -87,7 +101,6 @@ export default function Home() {
       })
       setCards(formattedCards)
     } else if (!isLoading && realMarkets.length === 0) {
-      // Jika loading selesai tapi tidak ada data, kosongkan atau pakai mock
       setCards([]) 
     }
   }, [realMarkets, isLoading])
@@ -96,8 +109,20 @@ export default function Home() {
     connect({ connector: coinbaseWallet({ appName: 'TITEN' }) })
   }
 
-  const handleAddTransaction = (transaction: any) => {
+  // 🟢 FUNGSI PENTING: Dipanggil saat CardStack selesai transaksi
+  const handleTransactionSuccess = async (transaction: any) => {
+    // 1. Simpan history
     setTransactionHistory([transaction, ...transactionHistory])
+    
+    // 2. Refresh saldo IDRX (Penting agar saldo berkurang di UI)
+    await refetchBalance()
+
+    // 3. Tampilkan Notifikasi Sukses
+    setToast({
+        message: `Berhasil Stake ${transaction.action} pada ${transaction.card.title}!`,
+        type: 'success',
+        isVisible: true
+    })
   }
 
   const handleSubmitQuestion = async (data: QuestionSubmission) => {
@@ -111,7 +136,6 @@ export default function Home() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
-  // Prevent Hydration Mismatch: Jangan render konten berat sebelum mounted
   if (!isMounted) return null;
 
   return (
@@ -126,8 +150,9 @@ export default function Home() {
               💰
             </div>
             <div className="flex flex-col">
+              {/* HANYA TAMPILKAN IDRX & ADDRESS */}
               <span className="font-bold text-base text-gray-900">
-                {balanceData ? `${parseFloat(balanceData.formatted).toFixed(4)} ETH` : 'Loading...'}
+                {idrxBalance ? `${parseFloat(idrxBalance.formatted).toFixed(2)} ${idrxBalance.symbol}` : 'Loading...'}
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-700 font-medium">
@@ -187,7 +212,8 @@ export default function Home() {
                 setSelectedCard(card)
                 setShowDetailModal(true)
               }}
-              onTransaction={handleAddTransaction}
+              // Sambungkan ke fungsi sukses tadi
+              onTransaction={handleTransactionSuccess}
             />
           )
         )}
@@ -196,7 +222,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* MODALS & NAVIGATION */}
+      {/* MODALS */}
       <DetailModal 
         card={selectedCard}
         isOpen={showDetailModal}
@@ -214,6 +240,7 @@ export default function Home() {
         onTabChange={setCurrentTab}
       />
 
+      {/* Toast Notifikasi */}
       <Toast
         message={toast.message}
         type={toast.type}
