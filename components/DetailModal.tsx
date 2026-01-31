@@ -22,7 +22,7 @@ export default function DetailModal({ card, isOpen, onClose }: DetailModalProps)
   if (!isOpen || !card) return null
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[150] bg-black animate-in fade-in"
       onClick={onClose}
     >
@@ -46,13 +46,15 @@ export default function DetailModal({ card, isOpen, onClose }: DetailModalProps)
         {/* Content */}
         <div className="px-6 pb-20">
           {/* Hero Image */}
-          <div className="relative -mx-6 mb-8 overflow-hidden rounded-none bg-gradient-to-b from-gray-900 to-gray-800 aspect-video w-screen">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-8xl mb-4">🎯</div>
-              </div>
-            </div>
-            
+          {/* Hero Image */}
+          <div className="relative -mx-6 mb-8 overflow-hidden bg-gray-100 aspect-video w-screen">
+            <img
+              src={card.image || "/Logo-Titen.png"}
+              alt={card.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/10"></div>
+
             {/* Status Badge */}
             {card.status && (
               <div className="absolute top-6 left-6 bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-semibold">
@@ -84,7 +86,7 @@ export default function DetailModal({ card, isOpen, onClose }: DetailModalProps)
                 <div className="bg-red-600 h-2 rounded-full" style={{ width: `${card.noPercentage}%` }}></div>
               </div>
             </div>
-            
+
             <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-5">
               <p className="text-xs text-gray-600 font-medium mb-2">Voting YES</p>
               <p className="text-3xl font-bold text-green-600">{card.yesPercentage}%</p>
@@ -102,7 +104,7 @@ export default function DetailModal({ card, isOpen, onClose }: DetailModalProps)
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-4">About This Market</h2>
               <p className="text-gray-700 leading-relaxed">
-                {card.title} is a prediction market where you can stake your IDRX tokens on the outcome. 
+                {card.title} is a prediction market where you can stake your IDRX tokens on the outcome.
                 This market has a total trading volume of {card.volume} with {card.yesPercentage}% predicting YES and {card.noPercentage}% predicting NO.
               </p>
             </div>

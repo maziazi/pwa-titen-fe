@@ -217,19 +217,32 @@ export default function Home() {
               <div className="text-gray-600 font-medium animate-pulse">Loading markets...</div>
             </div>
           ) : (
-            <CardStack
-              cards={cards.length > 0 ? cards : mockCards}
-              onCardDoubleTap={(card) => {
-                setSelectedCard(card)
-                setShowDetailModal(true)
-              }}
-              // Sambungkan ke fungsi sukses tadi
-              onTransaction={handleTransactionSuccess}
-            />
+            <div className="flex flex-col h-full">
+              <div className="flex-1 relative">
+                <CardStack
+                  cards={cards.length > 0 ? cards : mockCards}
+                  onCardDoubleTap={(card) => {
+                    setSelectedCard(card)
+                    setShowDetailModal(true)
+                  }}
+                  onTransaction={handleTransactionSuccess}
+                />
+              </div>
+              <div className="py-2 text-center text-xs font-medium text-gray-500 bg-white/50 backdrop-blur-sm rounded-lg mx-6 mb-2">
+                <p>Swipe <span className="text-red-500 font-bold">Left</span> for NO • Swipe <span className="text-green-600 font-bold">Right</span> for YES</p>
+                <p className="mt-0.5">Swipe <span className="text-blue-500 font-bold">Up</span> to Skip • <span className="text-gray-700 font-bold">Double Tap</span> for Detail</p>
+              </div>
+            </div>
           )
         )}
         {currentTab === 'activity' && (
-          <ActivityPage transactions={transactionHistory} />
+          <ActivityPage
+            transactions={transactionHistory}
+            onCardClick={(card) => {
+              setSelectedCard(card)
+              setShowDetailModal(true)
+            }}
+          />
         )}
       </div>
 
